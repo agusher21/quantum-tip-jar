@@ -31,10 +31,22 @@ const REST_URL = import.meta.env.VITE_QORE_REST_URL ?? REST_PROXY_PATH;
 
 const card: React.CSSProperties = {
   background: "#fff",
-  border: "1px solid #e5e7eb",
-  borderRadius: 12,
+  border: "1px solid #e9e5f5",
+  borderRadius: 16,
   padding: "1.25rem",
   marginTop: "1rem",
+  boxShadow: "0 4px 24px rgba(109, 40, 217, 0.08)",
+};
+
+const pill: React.CSSProperties = {
+  display: "inline-block",
+  padding: "0.2rem 0.65rem",
+  borderRadius: 999,
+  background: "#ede9fe",
+  color: "#5b21b6",
+  fontSize: "0.8rem",
+  fontWeight: 600,
+  marginRight: "0.4rem",
 };
 
 const inputStyle: React.CSSProperties = {
@@ -47,13 +59,15 @@ const inputStyle: React.CSSProperties = {
 };
 
 const buttonStyle: React.CSSProperties = {
-  padding: "0.6rem 1.2rem",
+  padding: "0.65rem 1.4rem",
   border: "none",
-  borderRadius: 8,
-  background: "#6d28d9",
+  borderRadius: 10,
+  background: "linear-gradient(135deg, #7c3aed, #6d28d9)",
   color: "#fff",
   fontSize: "1rem",
+  fontWeight: 600,
   cursor: "pointer",
+  boxShadow: "0 2px 12px rgba(109, 40, 217, 0.35)",
 };
 
 function shortAddress(address: string): string {
@@ -249,14 +263,33 @@ export function App(): JSX.Element {
       style={{
         fontFamily: "system-ui, sans-serif",
         maxWidth: 760,
-        margin: "2rem auto",
-        padding: "0 1rem",
+        margin: "0 auto",
+        padding: "2rem 1rem 3rem",
         lineHeight: 1.5,
         color: "#111827",
+        background: "linear-gradient(180deg, #f5f3ff 0%, #ffffff 480px)",
+        minHeight: "100vh",
       }}
     >
       <header>
-        <h1 style={{ marginBottom: 0 }}>🫙 Quantum Tip Jar</h1>
+        <img
+          src="/cover.jpg"
+          alt="Quantum Tip Jar — a glass jar of gold Q coins with purple quantum rings, QoreChain Testnet"
+          style={{
+            width: "100%",
+            borderRadius: 16,
+            display: "block",
+            boxShadow: "0 8px 32px rgba(109, 40, 217, 0.25)",
+          }}
+        />
+        <h1 style={{ marginBottom: 0, marginTop: "1rem", fontSize: "1.9rem" }}>
+          🫙 Quantum Tip Jar
+        </h1>
+        <p style={{ marginTop: "0.5rem", marginBottom: "0.5rem" }}>
+          <span style={pill}>Hybrid-signed</span>
+          <span style={pill}>QoreChain Testnet</span>
+          <span style={pill}>Quantum Pass</span>
+        </p>
         <p style={{ color: "#555", marginTop: "0.25rem" }}>
           Send a testnet QOR tip to any <code>qor1…</code> address. Every tip
           is a hybrid-signed transaction (secp256k1 + ML-DSA-87) on{" "}
@@ -418,10 +451,10 @@ export function App(): JSX.Element {
           <ol style={{ paddingLeft: "1.5rem" }}>
             {leaderboard.map((row, i) => (
               <li key={row.address} style={{ marginBottom: "0.5rem" }}>
+                {i === 0 ? "🥇 " : i === 1 ? "🥈 " : i === 2 ? "🥉 " : `${i + 1}. `}
                 <code>{shortAddress(row.address)}</code> —{" "}
                 <strong>{uqorToQor(row.totalUqor)} QOR</strong> in{" "}
                 {row.tipCount} tip{row.tipCount > 1 ? "s" : ""}
-                {i === 0 && " 👑"}
               </li>
             ))}
           </ol>
