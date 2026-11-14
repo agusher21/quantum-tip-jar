@@ -42,12 +42,15 @@ const pill: React.CSSProperties = {
   display: "inline-block",
   padding: "0.2rem 0.65rem",
   borderRadius: 999,
-  background: "#ede9fe",
-  color: "#5b21b6",
+  background: "rgba(237, 233, 254, 0.16)",
+  color: "#ede9fe",
   fontSize: "0.8rem",
   fontWeight: 600,
   marginRight: "0.4rem",
+  border: "1px solid rgba(237, 233, 254, 0.35)",
 };
+
+const linkLight: React.CSSProperties = { color: "#c4b5fd" };
 
 const inputStyle: React.CSSProperties = {
   width: "100%",
@@ -314,10 +317,19 @@ export function App(): JSX.Element {
         padding: "2rem 1rem 3rem",
         lineHeight: 1.5,
         color: "#111827",
-        background: "linear-gradient(180deg, #f5f3ff 0%, #ffffff 480px)",
+        background: "transparent",
+        position: "relative",
         minHeight: "100vh",
       }}
     >
+      <div className="qj-bg" aria-hidden="true">
+        <div className="qj-stars" />
+        <div className="qj-orb qj-orb-1" />
+        <div className="qj-orb qj-orb-2" />
+        <div className="qj-orb qj-orb-3" />
+        <div className="qj-orb qj-orb-4" />
+      </div>
+      <div style={{ position: "relative", zIndex: 1 }}>
       <header>
         <img
           src="/cover.jpg"
@@ -329,7 +341,15 @@ export function App(): JSX.Element {
             boxShadow: "0 8px 32px rgba(109, 40, 217, 0.25)",
           }}
         />
-        <h1 style={{ marginBottom: 0, marginTop: "1rem", fontSize: "1.9rem" }}>
+        <h1
+          style={{
+            marginBottom: 0,
+            marginTop: "1rem",
+            fontSize: "1.9rem",
+            color: "#fff",
+            textShadow: "0 2px 16px rgba(124, 58, 237, 0.6)",
+          }}
+        >
           🫙 Quantum Tip Jar
         </h1>
         <p style={{ marginTop: "0.5rem", marginBottom: "0.5rem" }}>
@@ -337,13 +357,13 @@ export function App(): JSX.Element {
           <span style={pill}>QoreChain Testnet</span>
           <span style={pill}>Quantum Pass</span>
         </p>
-        <p style={{ color: "#555", marginTop: "0.25rem" }}>
+        <p style={{ color: "#e9d5ff", marginTop: "0.25rem" }}>
           Send a testnet QOR tip to one — or up to 10 —{" "}
           <code>qor1…</code> addresses in a single transaction. Every tip
           is a hybrid-signed transaction (secp256k1 + ML-DSA-87) on{" "}
           <code>{CHAIN_NAME}</code>.
         </p>
-        <p style={{ color: "#555", fontSize: "0.9rem" }}>
+        <p style={{ color: "#c4b5fd", fontSize: "0.9rem" }}>
           Built for the QoreChain Developer Fest — Quantum Pass. Testnet only;
           QOR here has no real value.
           {mockOn && (
@@ -481,19 +501,44 @@ export function App(): JSX.Element {
       </section>
 
       {status && (
-        <p style={{ color: "#065f46", marginTop: "1rem" }} role="status">
+        <p
+          style={{
+            color: "#a7f3d0",
+            marginTop: "1rem",
+            background: "rgba(6, 95, 70, 0.45)",
+            border: "1px solid rgba(167, 243, 208, 0.4)",
+            borderRadius: 10,
+            padding: "0.6rem 0.9rem",
+          }}
+          role="status"
+        >
           {status}
         </p>
       )}
       {error && (
-        <p style={{ color: "#b00020", marginTop: "1rem" }} role="alert">
+        <p
+          style={{
+            color: "#fecaca",
+            marginTop: "1rem",
+            background: "rgba(127, 29, 29, 0.45)",
+            border: "1px solid rgba(252, 165, 165, 0.4)",
+            borderRadius: 10,
+            padding: "0.6rem 0.9rem",
+          }}
+          role="alert"
+        >
           {error}
         </p>
       )}
       {lastTip && (
-        <p style={{ marginTop: "0.5rem" }}>
+        <p style={{ marginTop: "0.5rem", color: "#e9d5ff" }}>
           Tx:{" "}
-          <a href={txRestUrl(lastTip.txHash)} target="_blank" rel="noreferrer">
+          <a
+            href={txRestUrl(lastTip.txHash)}
+            target="_blank"
+            rel="noreferrer"
+            style={linkLight}
+          >
             <code>{lastTip.txHash}</code>
           </a>{" "}
           (height {lastTip.height}, shield {lastTip.shield})
@@ -545,7 +590,7 @@ export function App(): JSX.Element {
         )}
       </section>
 
-      <footer style={{ marginTop: "1.5rem", fontSize: "0.9rem", color: "#555" }}>
+      <footer style={{ marginTop: "1.5rem", fontSize: "0.9rem", color: "#c4b5fd" }}>
         <p>
           How it works: the app connects to QoreX on{" "}
           <code>{CHAIN_NAME}</code>, reads balances over the QoreChain REST
@@ -556,19 +601,20 @@ export function App(): JSX.Element {
           straight from your wallet to the recipient.
         </p>
         <p>
-          <a href={FEST_URL} target="_blank" rel="noreferrer">
+          <a href={FEST_URL} target="_blank" rel="noreferrer" style={linkLight}>
             QoreChain Developer Fest
           </a>{" "}
           ·{" "}
-          <a href={EXPLORER_HOME} target="_blank" rel="noreferrer">
+          <a href={EXPLORER_HOME} target="_blank" rel="noreferrer" style={linkLight}>
             Explorer
           </a>{" "}
           ·{" "}
-          <a href={FAUCET_URL} target="_blank" rel="noreferrer">
+          <a href={FAUCET_URL} target="_blank" rel="noreferrer" style={linkLight}>
             Faucet
           </a>
         </p>
       </footer>
+      </div>
     </main>
   );
 }
