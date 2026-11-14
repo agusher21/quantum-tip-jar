@@ -122,17 +122,46 @@ export async function sendTip(
   amountQor: string,
   message: string,
 ): Promise<TipResult> {
-  const amountUqor = qorToUqor(amountQor);
-  const value = MsgSend.encode({
-    fromAddress,
-    toAddress,
-    amount: [{ denom: "uqor", amount: amountUqor }],
-  }).finish();
+  return sendBatchTip(fromAddress, [{ toAddress, amountQor }], message);
+}
+
+export interface BatchRecipient {
+  toAddress: string;
+  amountQor: string;
+}
+
+/**
+ * Send one hybrid-signed transaction carrying a MsgSend per recipient, so a
+ * single approval tips many people at once. Gas scales ~200k per transfer
+ * (a single MsgSend used ~181k gas on testnet).
+ */
+export async function sendBatchTip(
+  fromAddress: string,
+  recipients: BatchRecipient[],
+  message: string,
+): Promise<TipResult> {
+  if (recipients.length === 0) {
+    throw new Error("Add at least one recipient.");
+  }
+  if (recipients.length > 10) {
+    throw new Error("At most 10 recipients per send.");
+  }
+  const messages = recipients.map((r) => {
+    const amountUqor = qorToUqor(r.amountQor);
+    return {
+      typeUrl: MSG_SEND_TYPE_URL,
+      value: MsgSend.encode({
+        fromAddress,
+        toAddress: r.toAddress,
+        amount: [{ denom: "uqor", amount: amountUqor }],
+      }).finish(),
+    };
+  });
   const res = await qorexSignAndBroadcast({
     chainId: CHAIN_ID,
-    messages: [{ typeUrl: MSG_SEND_TYPE_URL, value }],
+    messages,
     memo: buildTipMemo(message),
-    gasLimit: 200000,
+    gasLimit: 200000 * recipients.length,
   });
   return {
     txHash: res.txHash,
@@ -178,7 +207,8 @@ export function loadLedger(): TipRecord[] {
 
 export function recordTip(tip: TipRecord): TipRecord[] {
   const ledger = loadLedger();
-  if (!ledger.some((t) => t.txHash === tip.txHash)) {
+  // A batch send shares one txHash across recipients, so dedupe on tx+to.
+  if (!ledger.some((t) => t.txHash === tip.txHash && t.to === tip.to)) {
     ledger.unshift(tip);
     try {
       localStorage.setItem(LEDGER_KEY, JSON.stringify(ledger.slice(0, 500)));

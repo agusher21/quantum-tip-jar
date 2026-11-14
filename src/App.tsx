@@ -17,7 +17,7 @@ import {
   qorToUqor,
   recordTip,
   REST_PROXY_PATH,
-  sendTip,
+  sendBatchTip,
   TIP_MEMO_TAG,
   txRestUrl,
   uqorToQor,
@@ -86,7 +86,7 @@ export function App(): JSX.Element {
 
   const [address, setAddress] = useState<string | null>(null);
   const [balanceUqor, setBalanceUqor] = useState<string | null>(null);
-  const [recipient, setRecipient] = useState("");
+  const [recipientsText, setRecipientsText] = useState("");
   const [amount, setAmount] = useState("");
   const [message, setMessage] = useState("");
   const [tips, setTips] = useState<TipRecord[]>(() => loadLedger());
@@ -187,6 +187,30 @@ export function App(): JSX.Element {
     setStatus("Disconnected. Your tips stay on chain and in the leaderboard.");
   }
 
+  /** Recipient list: one qor1… address per line, deduped, max 10. */
+  const recipientList = useMemo(() => {
+    const seen = new Set<string>();
+    const list: string[] = [];
+    for (const line of recipientsText.split("\n")) {
+      const addr = line.trim();
+      if (addr && !seen.has(addr)) {
+        seen.add(addr);
+        list.push(addr);
+      }
+    }
+    return list;
+  }, [recipientsText]);
+
+  /** Total QOR for this send (same amount per person). */
+  const totalUqor = useMemo(() => {
+    try {
+      if (recipientList.length === 0) return null;
+      return (BigInt(qorToUqor(amount)) * BigInt(recipientList.length)).toString();
+    } catch {
+      return null;
+    }
+  }, [amount, recipientList]);
+
   async function handleSendTip(): Promise<void> {
     setError(null);
     setStatus(null);
@@ -195,9 +219,17 @@ export function App(): JSX.Element {
       setError("Connect QoreX first.");
       return;
     }
-    const to = recipient.trim();
-    if (!isValidQorAddress(to)) {
-      setError("Recipient must be a valid qor1… address.");
+    if (recipientList.length === 0) {
+      setError("Add at least one recipient address.");
+      return;
+    }
+    if (recipientList.length > 10) {
+      setError("At most 10 recipients per send.");
+      return;
+    }
+    const bad = recipientList.find((a) => !isValidQorAddress(a));
+    if (bad) {
+      setError(`Not a valid qor1… address: ${bad}`);
       return;
     }
     let amountUqor: string;
@@ -207,34 +239,49 @@ export function App(): JSX.Element {
       setError(err instanceof Error ? err.message : String(err));
       return;
     }
-    if (balanceUqor !== null && BigInt(amountUqor) > BigInt(balanceUqor)) {
+    const total = BigInt(amountUqor) * BigInt(recipientList.length);
+    if (balanceUqor !== null && total > BigInt(balanceUqor)) {
       setError(
-        `Amount (${amount} QOR) is more than your balance (${uqorToQor(balanceUqor)} QOR). Top up from the faucet first.`,
+        `Total (${uqorToQor(total.toString())} QOR for ${recipientList.length} people) is more than your balance (${uqorToQor(balanceUqor)} QOR). Top up from the faucet first.`,
       );
       return;
     }
     setBusy(true);
-    setStatus("Waiting for your approval in QoreX…");
+    setStatus(
+      recipientList.length > 1
+        ? `Waiting for your approval in QoreX… (1 tx, ${recipientList.length} recipients)`
+        : "Waiting for your approval in QoreX…",
+    );
     try {
-      const res = await sendTip(address, to, amount, message);
+      const res = await sendBatchTip(
+        address,
+        recipientList.map((to) => ({ toAddress: to, amountQor: amount })),
+        message,
+      );
       if (res.code !== 0) {
         setError(`Transaction failed on chain (code ${res.code}). Tx: ${res.txHash}`);
         return;
       }
-      const record: TipRecord = {
-        txHash: res.txHash,
-        from: address,
-        to,
-        amountUqor,
-        memo: buildTipMemo(message),
-        timestamp: Date.now(),
-        shield: res.shield,
-      };
-      setTips(recordTip(record));
+      let ledger = loadLedger();
+      for (const to of recipientList) {
+        const record: TipRecord = {
+          txHash: res.txHash,
+          from: address,
+          to,
+          amountUqor,
+          memo: buildTipMemo(message),
+          timestamp: Date.now(),
+          shield: res.shield,
+        };
+        ledger = recordTip(record);
+      }
+      setTips(ledger);
       setLastTip(res);
       if (res.shield === "shielded") {
         setStatus(
-          "Tip sent and hybrid-signed (secp256k1 + ML-DSA-87). Shield: shielded.",
+          recipientList.length > 1
+            ? `Sent ${uqorToQor(total.toString())} QOR to ${recipientList.length} people in one hybrid-signed tx (secp256k1 + ML-DSA-87). Shield: shielded.`
+            : "Tip sent and hybrid-signed (secp256k1 + ML-DSA-87). Shield: shielded.",
         );
       } else {
         setStatus(
@@ -291,7 +338,8 @@ export function App(): JSX.Element {
           <span style={pill}>Quantum Pass</span>
         </p>
         <p style={{ color: "#555", marginTop: "0.25rem" }}>
-          Send a testnet QOR tip to any <code>qor1…</code> address. Every tip
+          Send a testnet QOR tip to one — or up to 10 —{" "}
+          <code>qor1…</code> addresses in a single transaction. Every tip
           is a hybrid-signed transaction (secp256k1 + ML-DSA-87) on{" "}
           <code>{CHAIN_NAME}</code>.
         </p>
@@ -367,26 +415,36 @@ export function App(): JSX.Element {
       <section style={card}>
         <h2 style={{ marginTop: 0 }}>Send a tip</h2>
         <label style={{ display: "block", marginBottom: "0.75rem" }}>
-          Recipient (<code>qor1…</code>)
-          <input
-            value={recipient}
-            onChange={(e) => setRecipient(e.target.value)}
-            placeholder="qor1…"
-            style={{ ...inputStyle, marginTop: "0.25rem" }}
-            aria-label="Recipient address"
+          Recipients (<code>qor1…</code>, one per line, up to 10)
+          <textarea
+            value={recipientsText}
+            onChange={(e) => setRecipientsText(e.target.value)}
+            placeholder={"qor1…\nqor1…"}
+            rows={3}
+            style={{ ...inputStyle, marginTop: "0.25rem", resize: "vertical" }}
+            aria-label="Recipient addresses, one per line"
           />
         </label>
         <label style={{ display: "block", marginBottom: "0.75rem" }}>
-          Amount (QOR)
+          Amount per person (QOR)
           <input
             value={amount}
             onChange={(e) => setAmount(e.target.value)}
             placeholder="e.g. 1.5"
             inputMode="decimal"
             style={{ ...inputStyle, marginTop: "0.25rem" }}
-            aria-label="Amount in QOR"
+            aria-label="Amount in QOR per person"
           />
         </label>
+        {totalUqor !== null && recipientList.length > 0 && (
+          <p style={{ fontSize: "0.95rem", marginTop: "-0.25rem" }}>
+            Total: <strong>{uqorToQor(totalUqor)} QOR</strong> to{" "}
+            {recipientList.length} {recipientList.length > 1 ? "people" : "person"} —{" "}
+            <span style={{ color: "#555" }}>
+              one hybrid-signed transaction, one approval.
+            </span>
+          </p>
+        )}
         <label style={{ display: "block", marginBottom: "0.75rem" }}>
           Message (optional, goes in the tx memo)
           <input
@@ -403,7 +461,11 @@ export function App(): JSX.Element {
           disabled={busy || !address}
           style={{ ...buttonStyle, opacity: address ? 1 : 0.6 }}
         >
-          {busy ? "Working…" : "Send tip (hybrid-signed)"}
+          {busy
+            ? "Working…"
+            : recipientList.length > 1
+              ? `Send tips to ${recipientList.length} people (hybrid-signed)`
+              : "Send tip (hybrid-signed)"}
         </button>
         {!address && (
           <p style={{ fontSize: "0.9rem", color: "#555" }}>

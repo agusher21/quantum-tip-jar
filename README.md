@@ -14,10 +14,12 @@ recipient.
 - **Connect QoreX** — one click connects the QoreX wallet (browser extension
   or in-app dApp browser), switched to Testnet. Shows your `qor1…` address
   and testnet QOR balance.
-- **Send a tip** — enter any recipient `qor1…` address, an amount in QOR and
-  an optional message. QoreX shows the decoded transfer and fee for approval,
-  then signs it hybrid and broadcasts it. The message travels in the
-  transaction memo (tagged `Quantum Tip Jar`).
+- **Send a tip** — enter up to 10 recipient `qor1…` addresses (one per
+  line) and an amount in QOR per person, plus an optional message. One
+  hybrid-signed transaction carries a transfer to every recipient, so a
+  single QoreX approval tips the whole list. QoreX shows the decoded
+  transfers and fee for approval, then signs hybrid and broadcasts. The
+  message travels in the transaction memo (tagged `Quantum Tip Jar`).
 - **Top tippers leaderboard** — senders ranked by total QOR tipped, plus a
   recent-tips feed. Every entry links to the transaction on chain.
 - **Testnet only.** QOR here has no real value.
