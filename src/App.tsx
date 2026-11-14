@@ -110,7 +110,12 @@ export function App(): JSX.Element {
     void import("@qorechain/qorex-wallet-mock")
       .then(({ createQorexMock }) => {
         if (cancelled) return;
-        createQorexMock({ profile: "current" }).install(window);
+        // rest: "/lcd" — the mock's in-page REST calls (PQC account,
+        // broadcast, account info) must go through the same-origin /lcd
+        // proxy (Vite dev proxy / Vercel rewrite to api-testnet.qore.host);
+        // the default https://api-testnet.qore.host is cross-origin from
+        // this page and gets CORS-blocked, so sends fail before signing.
+        createQorexMock({ profile: "current", rest: "/lcd" }).install(window);
         setMockOn(true);
       })
       .catch((err: unknown) => {
