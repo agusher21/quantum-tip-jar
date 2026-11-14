@@ -1,0 +1,12 @@
+# Dependencies
+node_modules/
+
+# Build output
+dist/
+
+# Local env (contains proxy target; no secrets, but keep local)
+.env
+
+# Editor / OS
+.DS_Store
+*.local
